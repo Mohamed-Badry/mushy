@@ -1,0 +1,10 @@
+[package]
+name = "gif_walker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+crossterm = "0.26.1"
+image = "0.24.6"
+gif = "0.11.4"
+base64 = "0.13.0"
