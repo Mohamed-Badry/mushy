@@ -20,10 +20,7 @@ enum Direction {
 pub fn run(cli: &Cli, run_file: &str) -> io::Result<()> {
     let config = Config::load(&cli.config);
 
-    let gif_path = cli
-        .gif
-        .clone()
-        .or(config.gif_path);
+    let gif_path = cli.gif.clone().or(config.gif_path);
 
     let cw = if cli.cw {
         true
@@ -33,12 +30,16 @@ pub fn run(cli: &Cli, run_file: &str) -> io::Result<()> {
 
     let target_size = cli.size.or(config.target_size).unwrap_or(40);
 
+    let speed = cli.speed.or(config.speed).unwrap_or(1.0);
+
     let (cell_width, cell_height) = get_cell_dimensions();
+    let vertical_speed = speed * (cell_width as f32 / cell_height as f32);
+    
     let img_cells_x = (target_size as f32 / cell_width as f32).ceil() as u16;
     let img_cells_y = (target_size as f32 / cell_height as f32).ceil() as u16;
 
     let margin_bottom: u16 = img_cells_y + 1;
-    let margin_right: u16 = img_cells_x + 2;
+    let margin_right: u16 = img_cells_x + 1;
     let margin_top: u16 = 0;
     let margin_left: u16 = 0;
 
@@ -53,11 +54,11 @@ pub fn run(cli: &Cli, run_file: &str) -> io::Result<()> {
     let initial_size = crossterm::terminal::size().unwrap_or((80, 24));
     let term_rows = initial_size.1;
 
-    let mut col: u16 = margin_left;
-    let mut row: u16 = if cw {
-        margin_top
+    let mut logical_col: f32 = margin_left as f32;
+    let mut logical_row: f32 = if cw {
+        margin_top as f32
     } else {
-        term_rows.saturating_sub(margin_bottom)
+        term_rows.saturating_sub(margin_bottom) as f32
     };
     let mut dir = Direction::Right;
 
@@ -81,46 +82,53 @@ pub fn run(cli: &Cli, run_file: &str) -> io::Result<()> {
 
         match dir {
             Direction::Right => {
-                row = if cw { top_row } else { bottom_row };
-                if col >= right_col {
+                logical_row = if cw { top_row as f32 } else { bottom_row as f32 };
+                if logical_col >= right_col as f32 {
                     dir = if cw { Direction::Down } else { Direction::Up };
+                    logical_col = right_col as f32;
                 } else {
-                    col += 1;
+                    logical_col += speed;
                 }
             }
             Direction::Up => {
-                col = if cw { left_col } else { right_col };
-                if row <= top_row {
+                logical_col = if cw { left_col as f32 } else { right_col as f32 };
+                if logical_row <= top_row as f32 {
                     dir = if cw {
                         Direction::Right
                     } else {
                         Direction::Left
                     };
+                    logical_row = top_row as f32;
                 } else {
-                    row = row.saturating_sub(1);
+                    logical_row -= vertical_speed;
                 }
             }
             Direction::Left => {
-                row = if cw { bottom_row } else { top_row };
-                if col <= left_col {
+                logical_row = if cw { bottom_row as f32 } else { top_row as f32 };
+                if logical_col <= left_col as f32 {
                     dir = if cw { Direction::Up } else { Direction::Down };
+                    logical_col = left_col as f32;
                 } else {
-                    col = col.saturating_sub(1);
+                    logical_col -= speed;
                 }
             }
             Direction::Down => {
-                col = if cw { right_col } else { left_col };
-                if row >= bottom_row {
+                logical_col = if cw { right_col as f32 } else { left_col as f32 };
+                if logical_row >= bottom_row as f32 {
                     dir = if cw {
                         Direction::Left
                     } else {
                         Direction::Right
                     };
+                    logical_row = bottom_row as f32;
                 } else {
-                    row += 1;
+                    logical_row += vertical_speed;
                 }
             }
         }
+
+        let mut col = logical_col.round() as u16;
+        let mut row = logical_row.round() as u16;
 
         col = col.clamp(0, term_cols.saturating_sub(1));
         row = row.clamp(0, term_rows.saturating_sub(1));
@@ -157,7 +165,7 @@ pub fn run(cli: &Cli, run_file: &str) -> io::Result<()> {
             if i == 0 {
                 if write!(
                     frame_buf,
-                    "\x1b_Gf=100,a=T,i={},q=2,m={};{}\x1b\\",
+                    "\x1b_Gf=100,a=T,i={},z=999999,q=2,m={};{}\x1b\\",
                     next_id, m, chunk_str
                 )
                 .is_err()

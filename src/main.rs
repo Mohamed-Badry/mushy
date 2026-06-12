@@ -62,6 +62,10 @@ fn main() {
         cmd.arg("--size");
         cmd.arg(size.to_string());
     }
+    if let Some(speed) = cli.speed {
+        cmd.arg("--speed");
+        cmd.arg(speed.to_string());
+    }
     if cli.cw {
         cmd.arg("--cw");
     }

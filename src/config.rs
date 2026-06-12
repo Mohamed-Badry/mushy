@@ -7,6 +7,7 @@ pub struct Config {
     pub gif_path: Option<String>,
     pub rotate_clockwise: Option<bool>,
     pub target_size: Option<u32>,
+    pub speed: Option<f32>,
 }
 
 impl Config {

@@ -33,6 +33,7 @@ cargo run -- stop
 
 - `-g, --gif <PATH>`: Path to the GIF you want to animate.
 - `-s, --size <SIZE>`: The size to scale the GIF bounding box to (in pixels).
+- `-x, --speed <SPEED>`: Speed multiplier for the animation (e.g. `2.0` for double speed).
 - `--cw`: Rotate the GIF clockwise instead of counter-clockwise.
 - `-c, --config <PATH>`: Path to a custom `config.toml` file.
 
@@ -54,4 +55,7 @@ rotate_clockwise = false
 
 # The size to scale the GIF bounding box to (in pixels)
 target_size = 40
+
+# Speed multiplier (e.g. 1.0 is normal, 2.0 is double speed)
+speed = 1.0
 ```

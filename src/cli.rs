@@ -22,6 +22,10 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub size: Option<u32>,
 
+    /// Speed multiplier for the animation (e.g. 2.0 for double speed)
+    #[arg(short = 'x', long, global = true)]
+    pub speed: Option<f32>,
+
     /// Rotate the gif clockwise instead of counter-clockwise
     #[arg(long, global = true)]
     pub cw: bool,
