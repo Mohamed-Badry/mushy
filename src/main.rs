@@ -66,7 +66,12 @@ fn main() {
         cmd.arg("--cw");
     }
 
-    // detach from the current terminal so the user gets their prompt back
+    // Detach from the current terminal so the user gets their prompt back.
+    // SAFETY: `pre_exec` is unsafe because it runs in the context of the child process
+    // between `fork()` and `exec()`. We must only call async-signal-safe functions here.
+    // We uphold the safety contract by only calling `libc::setsid()`, which is a simple
+    // POSIX system call that creates a new session and detaches the process from the TTY.
+    // We avoid all memory allocations, locks, or complex Rust standard library calls.
     unsafe {
         cmd.pre_exec(|| {
             libc::setsid();
