@@ -15,10 +15,6 @@ const RUN_FILE: &str = "/tmp/gif_walker.run";
 struct Config {
     gif_path: Option<String>,
     rotate_clockwise: Option<bool>,
-    margin_bottom: Option<u16>,
-    margin_right: Option<u16>,
-    margin_top: Option<u16>,
-    margin_left: Option<u16>,
     target_size: Option<u32>,
 }
 
@@ -30,7 +26,7 @@ enum Direction {
     Down,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(
     author,
     version,
@@ -41,15 +37,27 @@ struct Cli {
     command: Option<Commands>,
 
     /// Path to a custom config.toml file
-    #[arg(long, global = true)]
+    #[arg(short, long, global = true)]
     config: Option<String>,
+
+    /// Path to the gif file
+    #[arg(short, long, global = true)]
+    gif: Option<String>,
+
+    /// Target size of the gif in pixels
+    #[arg(short, long, global = true)]
+    size: Option<u32>,
+
+    /// Rotate the gif clockwise instead of counter-clockwise
+    #[arg(long, global = true)]
+    cw: bool,
 
     /// Internal flag to run as daemon
     #[arg(long, hide = true)]
     daemon: bool,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 enum Commands {
     /// Stop the currently running gif_walker daemon
     Stop,
@@ -73,7 +81,7 @@ fn main() {
     }
 
     if cli.daemon {
-        if let Err(e) = run_daemon(cli.config) {
+        if let Err(e) = run_daemon(&cli) {
             eprintln!("Daemon error: {}", e);
             process::exit(1);
         }
@@ -96,9 +104,21 @@ fn main() {
 
     let mut cmd = process::Command::new(exe);
     cmd.arg("--daemon");
-    if let Some(cp) = cli.config {
+
+    if let Some(cp) = &cli.config {
         cmd.arg("--config");
         cmd.arg(cp);
+    }
+    if let Some(gif) = &cli.gif {
+        cmd.arg("--gif");
+        cmd.arg(gif);
+    }
+    if let Some(size) = cli.size {
+        cmd.arg("--size");
+        cmd.arg(size.to_string());
+    }
+    if cli.cw {
+        cmd.arg("--cw");
     }
 
     // detach from the current terminal so the user gets their prompt back
@@ -115,10 +135,10 @@ fn main() {
     }
 }
 
-fn run_daemon(config_path_opt: Option<String>) -> io::Result<()> {
+fn run_daemon(cli: &Cli) -> io::Result<()> {
     let mut config = Config::default();
 
-    let cfg_path = if let Some(cp) = config_path_opt {
+    let cfg_path = if let Some(cp) = &cli.config {
         Some(PathBuf::from(cp))
     } else {
         directories::ProjectDirs::from("", "", "gif_walker")
@@ -142,25 +162,31 @@ fn run_daemon(config_path_opt: Option<String>) -> io::Result<()> {
 # gif_path = "./mushroom.gif"
 # rotate_clockwise = false
 # target_size = 40
-# margin_bottom = 2
-# margin_right = 5
-# margin_top = 0
-# margin_left = 0
 "#;
             let _ = fs::write(&cp, default_toml.trim_start());
         }
     }
 
-    let gif_path = config
-        .gif_path
+    // CLI args take precedence over config file, config file takes precedence over defaults
+    let gif_path = cli
+        .gif
+        .clone()
+        .or(config.gif_path)
         .unwrap_or_else(|| "./mushroom.gif".to_string());
-    let cw = config.rotate_clockwise.unwrap_or(false);
-    let target_size = config.target_size.unwrap_or(40);
 
-    let margin_bottom = config.margin_bottom.unwrap_or(2);
-    let margin_right = config.margin_right.unwrap_or(5);
-    let margin_top = config.margin_top.unwrap_or(0);
-    let margin_left = config.margin_left.unwrap_or(0);
+    let cw = if cli.cw {
+        true
+    } else {
+        config.rotate_clockwise.unwrap_or(false)
+    };
+
+    let target_size = cli.size.or(config.target_size).unwrap_or(40);
+
+    // Hardcoded margins for stability
+    let margin_bottom: u16 = 2;
+    let margin_right: u16 = 5;
+    let margin_top: u16 = 0;
+    let margin_left: u16 = 0;
 
     let mut file = fs::File::open(&gif_path)?;
     let mut buffer = Vec::new();

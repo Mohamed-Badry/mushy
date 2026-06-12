@@ -12,8 +12,15 @@ Start the walker using the default configuration (`config.toml` in the current d
 cargo run
 ```
 
-Start the walker with a custom config file:
+Start the walker and override the configuration using CLI arguments:
 ```bash
+# Provide a custom GIF
+cargo run -- --gif ./my_custom_pet.gif
+
+# Change the target size and rotate clockwise
+cargo run -- --size 60 --cw
+
+# Provide a custom config file
 cargo run -- --config ./my_config.toml
 ```
 
@@ -22,9 +29,16 @@ Stop the daemon and clear the screen:
 cargo run -- stop
 ```
 
+## CLI Arguments
+
+- `-g, --gif <PATH>`: Path to the GIF you want to animate.
+- `-s, --size <SIZE>`: The size to scale the GIF bounding box to (in pixels).
+- `--cw`: Rotate the GIF clockwise instead of counter-clockwise.
+- `-c, --config <PATH>`: Path to a custom `config.toml` file.
+
 ## Configuration
 
-The configuration is handled via a TOML file. By default, it will look for `--config`, then your XDG Config directory (`~/.config/gif_walker/config.toml`), and if neither exists, it will fall back to default values.
+The configuration is handled via a TOML file. By default, it will look for your XDG Config directory (`~/.config/gif_walker/config.toml`), and if it doesn't exist, it will fall back to default values.
 
 Example `config.toml`:
 
@@ -37,11 +51,4 @@ rotate_clockwise = false
 
 # The size to scale the GIF bounding box to (in pixels)
 target_size = 40
-
-# Margins (in terminal cells) to keep the GIF away from the physical window edges.
-# Warning: Setting margin_bottom lower than 2 may cause your terminal to autoscroll.
-margin_bottom = 2
-margin_right = 5
-margin_top = 0
-margin_left = 0
 ```
