@@ -29,15 +29,6 @@ impl Config {
                         eprintln!("Warning: Failed to parse config file at {:?}", cp);
                     }
                 }
-            } else if let Some(parent) = cp.parent() {
-                let _ = fs::create_dir_all(parent);
-                let default_toml = r#"
-# Default configuration for gif_walker
-# gif_path = "./mushroom.gif"
-# rotate_clockwise = false
-# target_size = 40
-"#;
-                let _ = fs::write(&cp, default_toml.trim_start());
             }
         }
         config

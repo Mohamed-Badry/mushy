@@ -38,12 +38,15 @@ cargo run -- stop
 
 ## Configuration
 
-The configuration is handled via a TOML file. By default, it will look for your XDG Config directory (`~/.config/gif_walker/config.toml`), and if it doesn't exist, it will fall back to default values.
+The configuration is handled via a TOML file. It will look for a config file in your XDG Config directory (`~/.config/gif_walker/config.toml`) or a custom path passed via `--config`. 
+
+If a config file is not found, it gracefully falls back to default settings and uses the **built-in `mushroom.gif`** that is compiled directly into the binary! This means you can run the executable anywhere without worrying about carrying the original GIF file with you.
 
 Example `config.toml`:
 
 ```toml
 # Path to the GIF you want to animate (absolute or relative)
+# If left out or invalid, falls back to the embedded mushroom!
 gif_path = "./mushroom.gif"
 
 # Walk direction. False = Counter-Clockwise, True = Clockwise
