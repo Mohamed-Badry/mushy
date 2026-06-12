@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crossterm::{cursor, execute};
+use crossterm::cursor;
 use serde::Deserialize;
 use std::fs;
 use std::io::{self, Cursor, Read, Write};
@@ -67,6 +67,26 @@ fn clear_images(stdout: &mut io::Stdout) -> io::Result<()> {
     write!(stdout, "\x1b_Ga=d,d=i,i=1,q=2\x1b\\")?;
     write!(stdout, "\x1b_Ga=d,d=i,i=2,q=2\x1b\\")?;
     stdout.flush()
+}
+
+fn get_cell_dimensions() -> (u16, u16) {
+    let mut ws: libc::winsize = unsafe { std::mem::zeroed() };
+    // Fallback estimates if terminal doesn't provide exact pixels
+    let mut cell_width = 10;
+    let mut cell_height = 20;
+
+    unsafe {
+        if libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut ws) == 0 {
+            if ws.ws_col > 0 && ws.ws_xpixel > 0 {
+                cell_width = ws.ws_xpixel / ws.ws_col;
+            }
+            if ws.ws_row > 0 && ws.ws_ypixel > 0 {
+                cell_height = ws.ws_ypixel / ws.ws_row;
+            }
+        }
+    }
+
+    (cell_width, cell_height)
 }
 
 fn main() {
@@ -182,9 +202,13 @@ fn run_daemon(cli: &Cli) -> io::Result<()> {
 
     let target_size = cli.size.or(config.target_size).unwrap_or(40);
 
-    // Hardcoded margins for stability
-    let margin_bottom: u16 = 2;
-    let margin_right: u16 = 5;
+    let (cell_width, cell_height) = get_cell_dimensions();
+    let img_cells_x = (target_size as f32 / cell_width as f32).ceil() as u16;
+    let img_cells_y = (target_size as f32 / cell_height as f32).ceil() as u16;
+
+    // Dynamically calculated margins to prevent autoscroll
+    let margin_bottom: u16 = img_cells_y + 1;
+    let margin_right: u16 = img_cells_x + 2;
     let margin_top: u16 = 0;
     let margin_left: u16 = 0;
 
@@ -226,10 +250,14 @@ fn run_daemon(cli: &Cli) -> io::Result<()> {
             image::imageops::FilterType::Nearest,
         );
 
-        let f_normal = small_dyn.clone().into_rgba8().into_raw();
-        let f_feet_right = small_dyn.rotate270().into_rgba8().into_raw();
-        let f_feet_top = small_dyn.rotate180().into_rgba8().into_raw();
-        let f_feet_left = small_dyn.rotate90().into_rgba8().into_raw();
+        let mut f_normal = Vec::new();
+        small_dyn.write_to(&mut Cursor::new(&mut f_normal), image::ImageOutputFormat::Png).unwrap();
+        let mut f_feet_right = Vec::new();
+        small_dyn.rotate270().write_to(&mut Cursor::new(&mut f_feet_right), image::ImageOutputFormat::Png).unwrap();
+        let mut f_feet_top = Vec::new();
+        small_dyn.rotate180().write_to(&mut Cursor::new(&mut f_feet_top), image::ImageOutputFormat::Png).unwrap();
+        let mut f_feet_left = Vec::new();
+        small_dyn.rotate90().write_to(&mut Cursor::new(&mut f_feet_left), image::ImageOutputFormat::Png).unwrap();
 
         let (b_right, b_up, b_left, b_down);
 
@@ -343,8 +371,9 @@ fn run_daemon(cli: &Cli) -> io::Result<()> {
 
         let next_id = if current_id == 1 { 2 } else { 1 };
 
-        if let Err(e) = execute!(stdout, cursor::SavePosition, cursor::MoveTo(col, row)) {
-            eprintln!("Terminal error: {}", e);
+        let mut frame_buf = Vec::with_capacity(16384);
+        
+        if crossterm::queue!(frame_buf, cursor::SavePosition, cursor::MoveTo(col, row)).is_err() {
             break;
         }
 
@@ -364,9 +393,9 @@ fn run_daemon(cli: &Cli) -> io::Result<()> {
 
             if i == 0 {
                 if write!(
-                    stdout,
-                    "\x1b_Gf=32,a=T,i={},q=2,s={},v={},m={};{}\x1b\\",
-                    next_id, target_size, target_size, m, chunk_str
+                    frame_buf,
+                    "\x1b_Gf=100,a=T,i={},q=2,m={};{}\x1b\\",
+                    next_id, m, chunk_str
                 )
                 .is_err()
                 {
@@ -374,7 +403,7 @@ fn run_daemon(cli: &Cli) -> io::Result<()> {
                     break;
                 }
             } else {
-                if write!(stdout, "\x1b_Gm={};{}\x1b\\", m, chunk_str).is_err() {
+                if write!(frame_buf, "\x1b_Gm={};{}\x1b\\", m, chunk_str).is_err() {
                     write_failed = true;
                     break;
                 }
@@ -386,15 +415,20 @@ fn run_daemon(cli: &Cli) -> io::Result<()> {
         }
 
         // Wipe the old image from memory
-        if write!(stdout, "\x1b_Ga=d,d=i,i={},q=2\x1b\\", current_id).is_err() {
+        if write!(frame_buf, "\x1b_Ga=d,d=i,i={},q=2\x1b\\", current_id).is_err() {
             break;
         }
 
-        if execute!(stdout, cursor::RestorePosition).is_err() {
+        if crossterm::queue!(frame_buf, cursor::RestorePosition).is_err() {
             break;
         }
 
-        if stdout.flush().is_err() {
+        // Write to stdout atomically to prevent interleaving with other apps like rmpc
+        let mut stdout_locked = stdout.lock();
+        if stdout_locked.write_all(&frame_buf).is_err() {
+            break;
+        }
+        if stdout_locked.flush().is_err() {
             break;
         }
 
