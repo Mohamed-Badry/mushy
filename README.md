@@ -24,10 +24,17 @@ cargo run -- --size 60 --cw
 cargo run -- --config ./my_config.toml
 ```
 
-Stop the daemon and clear the screen:
+Stop the daemon in the current terminal pane and clear the screen:
 ```bash
 cargo run -- stop
 ```
+
+Stop **all** running instances across all terminal windows:
+```bash
+cargo run -- stop --all
+```
+
+> **Note:** Each pet is bound to the specific terminal pane (`tty`) it was launched in. You can have multiple pets running independently in different splits/windows. If you close a terminal window, its associated background pet will automatically terminate itself and clean up its run file.
 
 ## CLI Arguments
 

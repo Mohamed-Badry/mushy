@@ -33,10 +33,18 @@ pub struct Cli {
     /// Internal flag to run as daemon
     #[arg(long, hide = true)]
     pub daemon: bool,
+
+    /// Internal flag to pass the specific TTY run file
+    #[arg(long, hide = true)]
+    pub run_file: Option<String>,
 }
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Commands {
-    /// Stop the currently running gif_walker daemon
-    Stop,
+    /// Stop the currently running gif_walker daemon in this terminal
+    Stop {
+        /// Stop all running instances across all terminals
+        #[arg(short, long)]
+        all: bool,
+    },
 }

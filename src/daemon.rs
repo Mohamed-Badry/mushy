@@ -3,6 +3,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
+use std::fs;
 
 use crate::cli::Cli;
 use crate::config::Config;
@@ -17,7 +18,8 @@ enum Direction {
     Down,
 }
 
-pub fn run(cli: &Cli, run_file: &str) -> io::Result<()> {
+pub fn run(cli: &Cli) -> io::Result<()> {
+    let run_file = cli.run_file.as_deref().unwrap_or("/tmp/gif_walker.unknown.run");
     let config = Config::load(&cli.config);
 
     let gif_path = cli.gif.clone().or(config.gif_path);
@@ -206,5 +208,6 @@ pub fn run(cli: &Cli, run_file: &str) -> io::Result<()> {
         thread::sleep(Duration::from_millis(50));
     }
 
+    let _ = fs::remove_file(run_file);
     Ok(())
 }

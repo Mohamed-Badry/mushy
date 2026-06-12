@@ -12,21 +12,51 @@ use std::process;
 
 use cli::{Cli, Commands};
 
-const RUN_FILE: &str = "/tmp/gif_walker.run";
+fn get_run_file_path() -> String {
+    // SAFETY: `ttyname` returns a pointer to a static buffer or thread-local buffer
+    // containing the null-terminated path of the terminal device open on the file descriptor.
+    // We only pass `libc::STDOUT_FILENO`, which is valid.
+    unsafe {
+        let tty_ptr = libc::ttyname(libc::STDOUT_FILENO);
+        if !tty_ptr.is_null() {
+            let c_str = std::ffi::CStr::from_ptr(tty_ptr);
+            let tty_name = c_str.to_string_lossy();
+            let sanitized = tty_name.replace("/", "_");
+            return format!("/tmp/gif_walker.{}.run", sanitized);
+        }
+    }
+    "/tmp/gif_walker.unknown.run".to_string()
+}
 
 fn main() {
     let cli = Cli::parse();
 
-    if let Some(Commands::Stop) = cli.command {
-        let _ = fs::remove_file(RUN_FILE);
+    if let Some(Commands::Stop { all }) = cli.command {
+        if all {
+            if let Ok(entries) = fs::read_dir("/tmp/") {
+                for entry in entries.flatten() {
+                    let file_name = entry.file_name().to_string_lossy().to_string();
+                    if file_name.starts_with("gif_walker.") && file_name.ends_with(".run") {
+                        let _ = fs::remove_file(entry.path());
+                    }
+                }
+            }
+            println!("Stopped all gif_walker instances.");
+        } else {
+            let run_file = get_run_file_path();
+            let _ = fs::remove_file(&run_file);
+            println!("Stopped gif_walker in the current terminal.");
+        }
+
         let mut stdout = io::stdout();
         let _ = terminal::clear_images(&mut stdout);
-        println!("Stopped gif_walker.");
         return;
     }
 
+    let run_file = get_run_file_path();
+
     if cli.daemon {
-        if let Err(e) = daemon::run(&cli, RUN_FILE) {
+        if let Err(e) = daemon::run(&cli) {
             eprintln!("Daemon error: {}", e);
             process::exit(1);
         }
@@ -34,8 +64,8 @@ fn main() {
     }
 
     // Launch daemon
-    if let Err(e) = fs::write(RUN_FILE, "1") {
-        eprintln!("Failed to write run file {}: {}", RUN_FILE, e);
+    if let Err(e) = fs::write(&run_file, "1") {
+        eprintln!("Failed to write run file {}: {}", run_file, e);
         process::exit(1);
     }
 
@@ -49,6 +79,8 @@ fn main() {
 
     let mut cmd = process::Command::new(exe);
     cmd.arg("--daemon");
+    cmd.arg("--run-file");
+    cmd.arg(&run_file);
 
     if let Some(cp) = &cli.config {
         cmd.arg("--config");
