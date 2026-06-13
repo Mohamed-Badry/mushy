@@ -64,9 +64,66 @@ pub fn run(cli: &Cli) -> io::Result<()> {
     };
     let mut dir = Direction::Right;
 
-    let mut frame_idx = 0;
     let pid = std::process::id();
+    let time_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
+    let pseudo_rand = (pid as u128 ^ time_ms) as u32;
+
+    let term_cols = initial_size.0;
+    let bottom_row = term_rows.saturating_sub(margin_bottom);
+    let top_row = margin_top;
+    let right_col = term_cols.saturating_sub(margin_right);
+    let left_col = margin_left;
+
+    let width = right_col.saturating_sub(left_col);
+    let height = bottom_row.saturating_sub(top_row);
+    let perimeter = (width * 2 + height * 2).max(1);
+
+    let offset_cells = pseudo_rand % perimeter as u32;
+
+    for _ in 0..offset_cells {
+        match dir {
+            Direction::Right => {
+                logical_row = if cw { top_row as f32 } else { bottom_row as f32 };
+                if logical_col >= right_col as f32 {
+                    dir = if cw { Direction::Down } else { Direction::Up };
+                    logical_col = right_col as f32;
+                } else {
+                    logical_col += 1.0;
+                }
+            }
+            Direction::Up => {
+                logical_col = if cw { left_col as f32 } else { right_col as f32 };
+                if logical_row <= top_row as f32 {
+                    dir = if cw { Direction::Right } else { Direction::Left };
+                    logical_row = top_row as f32;
+                } else {
+                    logical_row -= 1.0;
+                }
+            }
+            Direction::Left => {
+                logical_row = if cw { bottom_row as f32 } else { top_row as f32 };
+                if logical_col <= left_col as f32 {
+                    dir = if cw { Direction::Up } else { Direction::Down };
+                    logical_col = left_col as f32;
+                } else {
+                    logical_col -= 1.0;
+                }
+            }
+            Direction::Down => {
+                logical_col = if cw { right_col as f32 } else { left_col as f32 };
+                if logical_row >= bottom_row as f32 {
+                    dir = if cw { Direction::Left } else { Direction::Right };
+                    logical_row = bottom_row as f32;
+                } else {
+                    logical_row += 1.0;
+                }
+            }
+        }
+    }
+
+    let mut frame_idx = (pseudo_rand as usize) % frames_right.len();
     let mut current_id = pid * 2;
+    let z_index = 100 + (pseudo_rand % 1000);
 
     loop {
         if !Path::new(run_file).exists() {
@@ -165,8 +222,8 @@ pub fn run(cli: &Cli) -> io::Result<()> {
             if i == 0 {
                 if write!(
                     frame_buf,
-                    "\x1b_Gf=100,a=T,i={},z=999999,q=2,m={};{}\x1b\\",
-                    next_id, m, chunk_str
+                    "\x1b_Gf=100,a=T,i={},z={},q=2,m={};{}\x1b\\",
+                    next_id, z_index, m, chunk_str
                 )
                 .is_err()
                 {
