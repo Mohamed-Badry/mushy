@@ -1,10 +1,4 @@
-use std::io::{self, Write};
 
-pub fn clear_images(stdout: &mut io::Stdout) -> io::Result<()> {
-    write!(stdout, "\x1b_Ga=d,d=i,i=1,q=2\x1b\\")?;
-    write!(stdout, "\x1b_Ga=d,d=i,i=2,q=2\x1b\\")?;
-    stdout.flush()
-}
 
 pub fn get_cell_dimensions() -> (u16, u16) {
     // SAFETY: `libc::winsize` is a C struct composed entirely of plain old data (integers).

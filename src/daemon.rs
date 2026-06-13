@@ -8,7 +8,7 @@ use std::fs;
 use crate::cli::Cli;
 use crate::config::Config;
 use crate::image_processing::load_and_encode_frames;
-use crate::terminal::{clear_images, get_cell_dimensions};
+use crate::terminal::get_cell_dimensions;
 
 #[derive(Clone, Copy)]
 enum Direction {
@@ -64,14 +64,12 @@ pub fn run(cli: &Cli) -> io::Result<()> {
     };
     let mut dir = Direction::Right;
 
-    let _ = clear_images(&mut stdout);
-
     let mut frame_idx = 0;
-    let mut current_id = 1;
+    let pid = std::process::id();
+    let mut current_id = pid * 2;
 
     loop {
         if !Path::new(run_file).exists() {
-            let _ = clear_images(&mut stdout);
             break;
         }
 
@@ -142,7 +140,7 @@ pub fn run(cli: &Cli) -> io::Result<()> {
             Direction::Down => &frames_down[frame_idx],
         };
 
-        let next_id = if current_id == 1 { 2 } else { 1 };
+        let next_id = if current_id == pid * 2 { pid * 2 + 1 } else { pid * 2 };
 
         let mut frame_buf = Vec::with_capacity(16384);
 
@@ -209,5 +207,11 @@ pub fn run(cli: &Cli) -> io::Result<()> {
     }
 
     let _ = fs::remove_file(run_file);
+    
+    // Clear this specific pet's images cleanly before exiting
+    let _ = write!(stdout, "\x1b_Ga=d,d=i,i={},q=2\x1b\\", pid * 2);
+    let _ = write!(stdout, "\x1b_Ga=d,d=i,i={},q=2\x1b\\", pid * 2 + 1);
+    let _ = stdout.flush();
+
     Ok(())
 }

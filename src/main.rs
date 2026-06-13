@@ -6,7 +6,7 @@ pub mod terminal;
 
 use clap::Parser;
 use std::fs;
-use std::io;
+
 use std::os::unix::process::CommandExt;
 use std::process;
 
@@ -48,8 +48,6 @@ fn main() {
             println!("Stopped gif_walker in the current terminal.");
         }
 
-        let mut stdout = io::stdout();
-        let _ = terminal::clear_images(&mut stdout);
         return;
     }
 
