@@ -1,11 +1,52 @@
 use std::fs;
 use std::io::{self, Cursor, Read};
 
+fn encode_rotated(img: &image::DynamicImage, angle: u32) -> io::Result<String> {
+    let rotated = match angle {
+        0 => img.clone(),
+        90 => img.rotate90(),
+        180 => img.rotate180(),
+        270 => img.rotate270(),
+        _ => unreachable!(),
+    };
+    let mut buf = Vec::new();
+    rotated
+        .write_to(&mut Cursor::new(&mut buf), image::ImageOutputFormat::Png)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    Ok(base64::encode(&buf))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Direction {
+    Right,
+    Up,
+    Left,
+    Down,
+}
+
+pub struct PetFrames {
+    pub right: Vec<String>,
+    pub up: Vec<String>,
+    pub left: Vec<String>,
+    pub down: Vec<String>,
+}
+
+impl PetFrames {
+    pub fn get(&self, dir: Direction) -> &Vec<String> {
+        match dir {
+            Direction::Right => &self.right,
+            Direction::Up => &self.up,
+            Direction::Left => &self.left,
+            Direction::Down => &self.down,
+        }
+    }
+}
+
 pub fn load_and_encode_frames(
     gif_path: Option<&str>,
     target_size: u32,
     cw: bool,
-) -> io::Result<(Vec<String>, Vec<String>, Vec<String>, Vec<String>)> {
+) -> io::Result<PetFrames> {
     let buffer = if let Some(path) = gif_path {
         match fs::File::open(path) {
             Ok(mut file) => {
@@ -28,10 +69,10 @@ pub fn load_and_encode_frames(
         .read_info(Cursor::new(buffer))
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-    let mut frames_right = Vec::new();
-    let mut frames_up = Vec::new();
-    let mut frames_left = Vec::new();
-    let mut frames_down = Vec::new();
+    let mut right = Vec::new();
+    let mut up = Vec::new();
+    let mut left = Vec::new();
+    let mut down = Vec::new();
 
     while let Some(frame) = decoder
         .read_next_frame()
@@ -56,60 +97,32 @@ pub fn load_and_encode_frames(
             image::imageops::FilterType::Nearest,
         );
 
-        let mut f_normal = Vec::new();
-        small_dyn
-            .write_to(
-                &mut Cursor::new(&mut f_normal),
-                image::ImageOutputFormat::Png,
-            )
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        let mut f_feet_right = Vec::new();
-        small_dyn
-            .rotate270()
-            .write_to(
-                &mut Cursor::new(&mut f_feet_right),
-                image::ImageOutputFormat::Png,
-            )
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        let mut f_feet_top = Vec::new();
-        small_dyn
-            .rotate180()
-            .write_to(
-                &mut Cursor::new(&mut f_feet_top),
-                image::ImageOutputFormat::Png,
-            )
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        let mut f_feet_left = Vec::new();
-        small_dyn
-            .rotate90()
-            .write_to(
-                &mut Cursor::new(&mut f_feet_left),
-                image::ImageOutputFormat::Png,
-            )
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        let (b_right, b_up, b_left, b_down);
-
-        if cw {
-            b_right = base64::encode(&f_feet_top);
-            b_down = base64::encode(&f_feet_right);
-            b_left = base64::encode(&f_normal);
-            b_up = base64::encode(&f_feet_left);
+        let angles = if cw {
+            [
+                (Direction::Right, 180),
+                (Direction::Up, 90),
+                (Direction::Left, 0),
+                (Direction::Down, 270),
+            ]
         } else {
-            b_right = base64::encode(&f_normal);
-            b_up = base64::encode(&f_feet_right);
-            b_left = base64::encode(&f_feet_top);
-            b_down = base64::encode(&f_feet_left);
-        }
+            [
+                (Direction::Right, 0),
+                (Direction::Up, 270),
+                (Direction::Left, 180),
+                (Direction::Down, 90),
+            ]
+        };
 
-        frames_right.push(b_right);
-        frames_up.push(b_up);
-        frames_left.push(b_left);
-        frames_down.push(b_down);
+        for (dir, angle) in angles {
+            let encoded = encode_rotated(&small_dyn, angle)?;
+            match dir {
+                Direction::Right => right.push(encoded),
+                Direction::Up => up.push(encoded),
+                Direction::Left => left.push(encoded),
+                Direction::Down => down.push(encoded),
+            }
+        }
     }
 
-    Ok((frames_right, frames_up, frames_left, frames_down))
+    Ok(PetFrames { right, up, left, down })
 }
