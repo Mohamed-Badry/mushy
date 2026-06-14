@@ -47,6 +47,8 @@ pub fn load_and_encode_frames(
     target_size: u32,
     cw: bool,
 ) -> io::Result<PetFrames> {
+    const DEFAULT_GIF_BYTES: &[u8] = include_bytes!("../mushroom.gif");
+
     let buffer = if let Some(path) = gif_path {
         match fs::File::open(path) {
             Ok(mut file) => {
@@ -56,11 +58,11 @@ pub fn load_and_encode_frames(
             }
             Err(e) => {
                 eprintln!("Failed to open gif {}, falling back to default: {}", path, e);
-                include_bytes!("../mushroom.gif").to_vec()
+                DEFAULT_GIF_BYTES.to_vec()
             }
         }
     } else {
-        include_bytes!("../mushroom.gif").to_vec()
+        DEFAULT_GIF_BYTES.to_vec()
     };
 
     let mut decoder = gif::DecodeOptions::new();

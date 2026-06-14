@@ -5,6 +5,11 @@ use std::thread;
 use std::time::Duration;
 use std::fs;
 
+const FRAME_DELAY_MS: u64 = 50;
+const BASE_Z_INDEX: u32 = 100;
+const MAX_PAYLOAD_CAPACITY: usize = 16384;
+const KITTY_CHUNK_SIZE: usize = 4096;
+
 use crate::cli::Cli;
 use crate::config::Config;
 use crate::terminal::get_cell_dimensions;
@@ -37,7 +42,7 @@ impl PetState {
             frame_idx: (pseudo_rand as usize) % frames_len,
             pid,
             current_id: pid * 2,
-            z_index: 100 + (pseudo_rand % 1000),
+            z_index: BASE_Z_INDEX + (pseudo_rand % 1000),
         }
     }
 
@@ -105,14 +110,13 @@ fn build_frame_payload(state: &PetState, bounds: &TerminalBounds, b64: &str) -> 
     row = row.clamp(0, bounds.term_rows.saturating_sub(1));
 
     let next_id = if state.current_id == state.pid * 2 { state.pid * 2 + 1 } else { state.pid * 2 };
-    let mut frame_buf = Vec::with_capacity(16384);
+    let mut frame_buf = Vec::with_capacity(MAX_PAYLOAD_CAPACITY);
 
     if crossterm::queue!(frame_buf, cursor::SavePosition, cursor::MoveTo(col, row)).is_err() {
         return None;
     }
 
-    let chunk_size = 4096;
-    let chunks: Vec<&[u8]> = b64.as_bytes().chunks(chunk_size).collect();
+    let chunks: Vec<&[u8]> = b64.as_bytes().chunks(KITTY_CHUNK_SIZE).collect();
 
     for (i, chunk) in chunks.iter().enumerate() {
         let m = if i == chunks.len() - 1 { 0 } else { 1 };
@@ -136,13 +140,18 @@ fn build_frame_payload(state: &PetState, bounds: &TerminalBounds, b64: &str) -> 
 }
 
 pub fn run(cli: &Cli) -> io::Result<()> {
-    let run_file = cli.run_file.as_deref().unwrap_or("/tmp/mushy.unknown.run");
+    let fallback_run_file = {
+        let mut path = std::env::temp_dir();
+        path.push("mushy.unknown.run");
+        path.to_string_lossy().into_owned()
+    };
+    let run_file = cli.run_file.as_deref().unwrap_or(&fallback_run_file);
     let config = Config::load(&cli.config);
 
     let gif_path = cli.gif.clone().or(config.gif_path);
-    let cw = cli.cw || config.rotate_clockwise.unwrap_or(false);
-    let target_size = cli.size.or(config.target_size).unwrap_or(40);
-    let speed = cli.speed.or(config.speed).unwrap_or(1.0);
+    let cw = cli.cw || config.rotate_clockwise;
+    let target_size = cli.size.unwrap_or(config.target_size);
+    let speed = cli.speed.unwrap_or(config.speed);
 
     let (cell_width, cell_height) = get_cell_dimensions();
     let vertical_speed = speed * (cell_width as f32 / cell_height as f32);
@@ -214,7 +223,7 @@ pub fn run(cli: &Cli) -> io::Result<()> {
         state.current_id = if state.current_id == pid * 2 { pid * 2 + 1 } else { pid * 2 };
         state.frame_idx = (state.frame_idx + 1) % frames.right.len();
         
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(FRAME_DELAY_MS));
     }
 
     let _ = fs::remove_file(run_file);

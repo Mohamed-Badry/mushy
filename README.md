@@ -46,6 +46,12 @@ cargo run -- stop --all
 
 > **Note:** If you close a terminal window manually, its associated background pets will automatically detect the closure, terminate themselves gracefully, and clean up their graphics from memory!
 
+## Limitations & Performance
+
+Because `mushy` relies on the Kitty Graphics Protocol to constantly pipe base64-encoded image chunks over the terminal's standard output (TTY) every 50 milliseconds, there are two practical limits to be aware of:
+- **Excessive Target Sizes (`--size`):** Passing a huge size like `--size 500` will cause the daemon to blast megabytes of base64 text into the terminal buffer every single frame. This will instantly bottleneck your terminal's PTY throughput, causing extreme lag and input stuttering. Keep the size reasonable (e.g. `20` to `150`).
+- **Very Long GIFs:** When spawning a new pet, `mushy` intercepts the GIF, extracts every frame, downscales it, rotates it in 4 directions, and pre-encodes the entire sequence into memory. Loading a GIF with hundreds of frames will cause a noticeable delay before the pet appears and will consume a lot of RAM.
+
 ## Known Issues
 
 - **Wezterm Alternate Screen Buffer Bug:** If you run an application that uses the Alternate Screen Buffer (like `btop`, `hx`, or `vim`) while pets are running, Wezterm may orphan the last rendered frame of the pet, leaving behind a frozen "ghost" sticker when you exit the app. This is a known issue with Wezterm's implementation of the Kitty protocol's `delete` command on inactive buffers. To clear the ghost, simply press `Ctrl+L` (or run `clear`) to force the terminal to redraw its grid.

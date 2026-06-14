@@ -12,6 +12,9 @@ use std::process;
 
 use cli::{Cli, Commands};
 
+pub const RUN_FILE_PREFIX: &str = "mushy.";
+pub const RUN_FILE_EXT: &str = ".run";
+
 fn get_run_file_path() -> String {
     // SAFETY: `ttyname` returns a pointer to a static buffer or thread-local buffer
     // containing the null-terminated path of the terminal device open on the file descriptor.
@@ -22,10 +25,14 @@ fn get_run_file_path() -> String {
             let c_str = std::ffi::CStr::from_ptr(tty_ptr);
             let tty_name = c_str.to_string_lossy();
             let sanitized = tty_name.replace("/", "_");
-            return format!("/tmp/mushy.{}.run", sanitized);
+            let mut path = std::env::temp_dir();
+            path.push(format!("{}{}{}", RUN_FILE_PREFIX, sanitized, RUN_FILE_EXT));
+            return path.to_string_lossy().into_owned();
         }
     }
-    "/tmp/mushy.unknown.run".to_string()
+    let mut path = std::env::temp_dir();
+    path.push(format!("{}unknown{}", RUN_FILE_PREFIX, RUN_FILE_EXT));
+    path.to_string_lossy().into_owned()
 }
 
 fn main() {
@@ -33,10 +40,10 @@ fn main() {
 
     if let Some(Commands::Stop { all }) = cli.command {
         if all {
-            if let Ok(entries) = fs::read_dir("/tmp/") {
+            if let Ok(entries) = fs::read_dir(std::env::temp_dir()) {
                 for entry in entries.flatten() {
                     let file_name = entry.file_name().to_string_lossy().to_string();
-                    if file_name.starts_with("mushy.") && file_name.ends_with(".run") {
+                    if file_name.starts_with(RUN_FILE_PREFIX) && file_name.ends_with(RUN_FILE_EXT) {
                         let _ = fs::remove_file(entry.path());
                     }
                 }
