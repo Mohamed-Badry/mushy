@@ -17,45 +17,47 @@ When you launch `mushy`, it immediately forks itself into the background as a de
 
 On startup, it decodes your GIF and pre-renders every single frame into memory for all 4 possible rotational directions. It then enters a highly efficient render loop, calculating its physical position along the perimeter of the specific terminal window it was launched in. Every 50 milliseconds, it securely pipes the next frame of the animation as a raw base64 payload to the terminal's standard output using the Kitty Graphics Protocol, utilizing double-buffering and exact Z-indexes to prevent flickering or graphical tearing.
 
+## Installation
+
+To install `mushy` globally to your system's Cargo path (`~/.cargo/bin`), simply run:
+```bash
+just install
+# or
+cargo install --path .
+```
+
 ## Usage
 
-Start the walker using the built-in `mushroom.gif` pet:
+Once installed, you can spawn the default mushroom pet simply by running:
 
 ```bash
-cargo run
-# or
-just test-default
+mushy
 ```
+*(Note: During development, you can substitute `mushy` with `cargo run --` or use the provided `just test-*` recipes).*
 
 Start the walker and override the configuration using CLI arguments:
 ```bash
 # Provide a custom GIF
-cargo run -- --gif ./walking_pollo.gif
-# or
-just test-pollo
+mushy --gif ./walking_pollo.gif
 
 # Change the target size and rotate clockwise
-cargo run -- --size 60 --cw
-# or
-just test-cw
+mushy --size 60 --cw
 
 # Change the physical movement speed (does not affect the leg animation rate!)
-cargo run -- --speed 2.5
-# or (spawns a giant fast pet)
-just test-giant
+mushy --speed 2.5
 
 # Provide a custom config file
-cargo run -- --config ./my_config.toml
+mushy --config ./my_config.toml
 ```
 
 Stop the daemon in the **current terminal pane** and clear the screen:
 ```bash
-cargo run -- stop
+mushy stop
 ```
 
 Stop **all** running instances across all terminal windows globally:
 ```bash
-cargo run -- stop --all
+mushy stop --all
 # or
 just stop
 ```
