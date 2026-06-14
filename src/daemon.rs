@@ -163,7 +163,7 @@ pub fn run(cli: &Cli) -> io::Result<()> {
 
     let mut stdout = io::stdout();
     let pid = std::process::id();
-    let time_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
+    let time_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis();
     let pseudo_rand = (pid as u128 ^ time_ms) as u32;
 
     let mut state = PetState::new(pid, pseudo_rand, frames.right.len());
