@@ -332,21 +332,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gif_walker"
-version = "0.1.0"
-dependencies = [
- "base64",
- "clap",
- "crossterm",
- "directories",
- "gif 0.11.4",
- "image",
- "libc",
- "serde",
- "toml",
-]
-
-[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -468,6 +453,21 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "mushy"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "clap",
+ "crossterm",
+ "directories",
+ "gif 0.11.4",
+ "image",
+ "libc",
+ "serde",
+ "toml",
 ]
 
 [[package]]

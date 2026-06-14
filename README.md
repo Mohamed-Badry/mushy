@@ -1,4 +1,4 @@
-# gif_walker
+# mushy
 
 A lightweight, daemonized terminal pet that walks along the inner borders of your terminal using the Kitty Graphics Protocol.
 
@@ -60,7 +60,7 @@ cargo run -- stop --all
 
 ## Configuration
 
-The configuration is handled via a TOML file. It will look for a config file in your XDG Config directory (`~/.config/gif_walker/config.toml`) or a custom path passed via `--config`. 
+The configuration is handled via a TOML file. It will look for a config file in your XDG Config directory (`~/.config/mushy/config.toml`) or a custom path passed via `--config`. 
 
 If a config file is not found, it gracefully falls back to default settings and uses the **built-in `mushroom.gif`**! This means you can run the executable anywhere.
 

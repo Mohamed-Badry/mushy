@@ -17,7 +17,7 @@ impl Config {
         let cfg_path = if let Some(cp) = cli_config {
             Some(PathBuf::from(cp))
         } else {
-            directories::ProjectDirs::from("", "", "gif_walker")
+            directories::ProjectDirs::from("", "", "mushy")
                 .map(|proj_dirs| proj_dirs.config_dir().join("config.toml"))
         };
 

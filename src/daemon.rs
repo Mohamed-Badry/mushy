@@ -136,7 +136,7 @@ fn build_frame_payload(state: &PetState, bounds: &TerminalBounds, b64: &str) -> 
 }
 
 pub fn run(cli: &Cli) -> io::Result<()> {
-    let run_file = cli.run_file.as_deref().unwrap_or("/tmp/gif_walker.unknown.run");
+    let run_file = cli.run_file.as_deref().unwrap_or("/tmp/mushy.unknown.run");
     let config = Config::load(&cli.config);
 
     let gif_path = cli.gif.clone().or(config.gif_path);

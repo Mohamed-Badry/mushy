@@ -3,7 +3,7 @@
 # Ensure we're using the latest build
 cargo build --release
 
-GIF_WALKER="./target/release/gif_walker"
+GIF_WALKER="./target/release/mushy"
 GIFS=("./mushroom.gif" "./walking_pollo.gif")
 
 echo "Spawning 5 random pets..."

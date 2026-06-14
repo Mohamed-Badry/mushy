@@ -41,7 +41,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Commands {
-    /// Stop the currently running gif_walker daemon in this terminal
+    /// Stop the currently running mushy daemon in this terminal
     Stop {
         /// Stop all running instances across all terminals
         #[arg(short, long)]

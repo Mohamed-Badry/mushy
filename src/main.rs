@@ -22,10 +22,10 @@ fn get_run_file_path() -> String {
             let c_str = std::ffi::CStr::from_ptr(tty_ptr);
             let tty_name = c_str.to_string_lossy();
             let sanitized = tty_name.replace("/", "_");
-            return format!("/tmp/gif_walker.{}.run", sanitized);
+            return format!("/tmp/mushy.{}.run", sanitized);
         }
     }
-    "/tmp/gif_walker.unknown.run".to_string()
+    "/tmp/mushy.unknown.run".to_string()
 }
 
 fn main() {
@@ -36,16 +36,16 @@ fn main() {
             if let Ok(entries) = fs::read_dir("/tmp/") {
                 for entry in entries.flatten() {
                     let file_name = entry.file_name().to_string_lossy().to_string();
-                    if file_name.starts_with("gif_walker.") && file_name.ends_with(".run") {
+                    if file_name.starts_with("mushy.") && file_name.ends_with(".run") {
                         let _ = fs::remove_file(entry.path());
                     }
                 }
             }
-            println!("Stopped all gif_walker instances.");
+            println!("Stopped all mushy instances.");
         } else {
             let run_file = get_run_file_path();
             let _ = fs::remove_file(&run_file);
-            println!("Stopped gif_walker in the current terminal.");
+            println!("Stopped mushy in the current terminal.");
         }
 
         return;
