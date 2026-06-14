@@ -46,6 +46,10 @@ cargo run -- stop --all
 
 > **Note:** If you close a terminal window manually, its associated background pets will automatically detect the closure, terminate themselves gracefully, and clean up their graphics from memory!
 
+## Known Issues
+
+- **Wezterm Alternate Screen Buffer Bug:** If you run an application that uses the Alternate Screen Buffer (like `btop`, `hx`, or `vim`) while pets are running, Wezterm may orphan the last rendered frame of the pet, leaving behind a frozen "ghost" sticker when you exit the app. This is a known issue with Wezterm's implementation of the Kitty protocol's `delete` command on inactive buffers. To clear the ghost, simply press `Ctrl+L` (or run `clear`) to force the terminal to redraw its grid.
+
 ## CLI Arguments
 
 - `-g, --gif <PATH>`: Path to the GIF you want to animate.
