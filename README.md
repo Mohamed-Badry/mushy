@@ -1,6 +1,10 @@
 # mushy
 
+<img src="mushroom.gif" width="200" alt="Jumping mushroom gif">
+
 A lightweight, daemonized terminal pet that walks along the inner borders of your terminal using the Kitty Graphics Protocol.
+
+> **Note:** This project is a shitpost/meme and not a serious project.
 
 ## Requirements
 - A terminal emulator with **Kitty Graphics Protocol** support (e.g. WezTerm, Kitty, Ghostty).
@@ -15,7 +19,7 @@ A lightweight, daemonized terminal pet that walks along the inner borders of you
 
 When you launch `mushy`, it immediately forks itself into the background as a detached daemon using `setsid` so it doesn't block your terminal prompt. 
 
-On startup, it decodes your GIF and pre-renders every single frame into memory for all 4 possible rotational directions. It then enters a highly efficient render loop, calculating its physical position along the perimeter of the specific terminal window it was launched in. Every 50 milliseconds, it securely pipes the next frame of the animation as a raw base64 payload to the terminal's standard output using the Kitty Graphics Protocol, utilizing double-buffering and exact Z-indexes to prevent flickering or graphical tearing.
+On startup, it decodes your GIF and pre-renders every frame into memory for all 4 rotational directions. It then enters a render loop, calculating its position along the perimeter of the specific terminal window it was launched in. Every 50 milliseconds, it pipes the next frame of the animation as a raw base64 payload to the terminal's standard output using the Kitty Graphics Protocol, utilizing double-buffering and exact Z-indexes to prevent flickering or graphical tearing.
 
 ## Installation
 
